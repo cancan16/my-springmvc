@@ -202,6 +202,7 @@ public class DispatcherServlet extends HttpServlet {
                 // 判断是否声明了自动装配（依赖注入）注解，比如@Autrowired @Qualifier
                 for (Field field : fields) {
                     if (field.isAnnotationPresent(EnjoyQualifier.class)) {
+                        // 获取指定注解对象
                         EnjoyQualifier qualifier = field.getAnnotation(EnjoyQualifier.class);
                         // 拿到@EnjoyQualifier("JamesServiceImpl")里的指定要注入的bean名字"JamesServiceImpl"
                         String value = qualifier.value();
@@ -241,14 +242,14 @@ public class DispatcherServlet extends HttpServlet {
                 Class<?> clazz = Class.forName(cn);//拿到class类,用来实例化
                 /***将扫描到的类，获取类名，并判断是否标记了EnjoyController注解，controllerbean放入容器**/
                 if (clazz.isAnnotationPresent(EnjoyController.class)) {
-                    EnjoyController controller = (EnjoyController) clazz.getAnnotation(EnjoyController.class);
+                    EnjoyController controller = clazz.getAnnotation(EnjoyController.class);
                     /***创建是实例化beanJamesController**/
                     Object instance = clazz.newInstance();
                     /**
                      * 获取对应的请求路径"/james"
                      * 创建路径和controller对应关系
                      */
-                    EnjoyRequestMapping requestMapping = (EnjoyRequestMapping) clazz
+                    EnjoyRequestMapping requestMapping = clazz
                             .getAnnotation(EnjoyRequestMapping.class);
                     // 得到"/james"请求路径
                     String rmvalue = requestMapping.value();
@@ -257,7 +258,7 @@ public class DispatcherServlet extends HttpServlet {
                     /***servicebean初始化放到容器*/
                 } else if (clazz.isAnnotationPresent(EnjoyService.class)) {
                     //获取当前clazz类的注解(通过这个注解可得到当前service的id)  @com.enjoy.james.annotation.EnjoyService(value=JamesServiceImpl)
-                    EnjoyService service = (EnjoyService) clazz.getAnnotation(EnjoyService.class);
+                    EnjoyService service = clazz.getAnnotation(EnjoyService.class);
                     Object instance = clazz.newInstance();
                     //put(JamesServiceImpl,instance)
                     beans.put(service.value(), instance);
