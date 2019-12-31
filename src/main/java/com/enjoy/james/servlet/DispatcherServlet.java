@@ -27,8 +27,10 @@ import java.util.*;
 public class DispatcherServlet extends HttpServlet {
     private static final long serialVersionUID = 1L;
 
+    /***扫描要创建的bean的包名*/
     List<String> classNames = new ArrayList<String>();
 
+    /***存放初始化bean容器*/
     Map<String, Object> beans = new HashMap<String, Object>();
 
     Map<String, Object> handlerMap = new HashMap<String, Object>();
@@ -48,23 +50,23 @@ public class DispatcherServlet extends HttpServlet {
      * @see Servlet#init(ServletConfig)
      */
     public void init(ServletConfig config) throws ServletException {
-        // 1、我们要根据一个基本包进行扫描，扫描里面的子包以及子包下的类
+        /**1、我们要根据一个基本包进行扫描，扫描里面的子包以及子包下的类**/
         scanPackage("com.enjoy");
 
         for (String classname : classNames) {
             System.out.println(classname);
         }
 
-        // 2、我们肯定是要把扫描出来的类进行实例化
+        /** 2、我们肯定是要把扫描出来的类进行实例化*/
         instance();
         for (Map.Entry<String, Object> entry : beans.entrySet()) {
             System.out.println(entry.getKey() + ":" + entry.getValue());
         }
 
-        // 3、依赖注入，把service层的实例注入到controller
+        /** 3、依赖注入，把service层的实例注入到controller*/
         ioc();
 
-        // 4、建立一个path与method的映射关系
+        /** 4、建立一个path与method的映射关系*/
         HandlerMapping();
         for (Map.Entry<String, Object> entry : handlerMap.entrySet()) {
             System.out.println(entry.getKey() + ":" + entry.getValue());
@@ -156,7 +158,7 @@ public class DispatcherServlet extends HttpServlet {
             Class<?> clazz = instance.getClass();
             // 拿所有Controller的类
             if (clazz.isAnnotationPresent(EnjoyController.class)) {
-                //@com.enjoy.james.annotation.EnjoyRequestMapping(value=/james)
+                // @com.enjoy.james.annotation.EnjoyRequestMapping(value=/james)
                 EnjoyRequestMapping requestMapping = (EnjoyRequestMapping) clazz
                         .getAnnotation(EnjoyRequestMapping.class);
                 // 获取Controller类上面的EnjoyRequestMapping注解里的请求路径
@@ -183,24 +185,25 @@ public class DispatcherServlet extends HttpServlet {
 
     // 初始化IOC容器
     private void ioc() {
-
         if (beans.entrySet().size() <= 0) {
             System.out.println("没有类的实例化！");
             return;
         }
-        //将实例化好的bean遍历,
+        // 将实例化好的bean遍历,
         for (Map.Entry<String, Object> entry : beans.entrySet()) {
-            Object instance = entry.getValue();//获取bean实例
-
-            Class<?> clazz = instance.getClass();//获取类,用来判断类里声明了哪些注解(主要是针对控制类里的判断,比如使用了@Autowired  @Qualifier,对这些注解进行解析)
+            // 获取bean实例
+            Object instance = entry.getValue();
+            // 获取类,用来判断类里声明了哪些注解(主要是针对控制类里的判断,比如使用了@Autowired  @Qualifier,对这些注解进行解析)
+            Class<?> clazz = instance.getClass();
             //判断该类是否使用了EnjoyController注解
             if (clazz.isAnnotationPresent(EnjoyController.class)) {
-                Field[] fields = clazz.getDeclaredFields();// 拿到类里面的属性
+                // 拿到类里面的属性
+                Field[] fields = clazz.getDeclaredFields();
                 // 判断是否声明了自动装配（依赖注入）注解，比如@Autrowired @Qualifier
                 for (Field field : fields) {
                     if (field.isAnnotationPresent(EnjoyQualifier.class)) {
-                        EnjoyQualifier qualifier = (EnjoyQualifier) field.getAnnotation(EnjoyQualifier.class);
-                        //拿到@EnjoyQualifier("JamesServiceImpl")里的指定要注入的bean名字"JamesServiceImpl"
+                        EnjoyQualifier qualifier = field.getAnnotation(EnjoyQualifier.class);
+                        // 拿到@EnjoyQualifier("JamesServiceImpl")里的指定要注入的bean名字"JamesServiceImpl"
                         String value = qualifier.value();
 
                         field.setAccessible(true);
@@ -236,16 +239,22 @@ public class DispatcherServlet extends HttpServlet {
 
             try {
                 Class<?> clazz = Class.forName(cn);//拿到class类,用来实例化
-                // 将扫描到的类，获取类名，并判断是否标记了EnjoyController注解
+                /***将扫描到的类，获取类名，并判断是否标记了EnjoyController注解，controllerbean放入容器**/
                 if (clazz.isAnnotationPresent(EnjoyController.class)) {
                     EnjoyController controller = (EnjoyController) clazz.getAnnotation(EnjoyController.class);
+                    /***创建是实例化beanJamesController**/
                     Object instance = clazz.newInstance();
-                    //获取对应的请求路径"/james"
+                    /**
+                     * 获取对应的请求路径"/james"
+                     * 创建路径和controller对应关系
+                     */
                     EnjoyRequestMapping requestMapping = (EnjoyRequestMapping) clazz
                             .getAnnotation(EnjoyRequestMapping.class);
-                    String rmvalue = requestMapping.value();//得到"/james"请求路径
-                    //用路径做为key,对应value为实例化对象
+                    // 得到"/james"请求路径
+                    String rmvalue = requestMapping.value();
+                    // 用路径做为key,对应value为实例化对象
                     beans.put(rmvalue, instance);
+                    /***servicebean初始化放到容器*/
                 } else if (clazz.isAnnotationPresent(EnjoyService.class)) {
                     //获取当前clazz类的注解(通过这个注解可得到当前service的id)  @com.enjoy.james.annotation.EnjoyService(value=JamesServiceImpl)
                     EnjoyService service = (EnjoyService) clazz.getAnnotation(EnjoyService.class);
