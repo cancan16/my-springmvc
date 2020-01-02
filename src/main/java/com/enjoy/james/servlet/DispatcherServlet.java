@@ -33,6 +33,7 @@ public class DispatcherServlet extends HttpServlet {
     /***存放初始化bean容器*/
     Map<String, Object> beans = new HashMap<String, Object>();
 
+    /***存放路径和方法映射关系*/
     Map<String, Object> handlerMap = new HashMap<String, Object>();
 
     Properties prop = null;
@@ -66,7 +67,9 @@ public class DispatcherServlet extends HttpServlet {
         /** 3、依赖注入，把service层的实例注入到controller*/
         ioc();
 
-        /** 4、建立一个path与method的映射关系*/
+        /** 4、建立一个path与method的映射关系
+         * url找到controller
+         */
         HandlerMapping();
         for (Map.Entry<String, Object> entry : handlerMap.entrySet()) {
             System.out.println(entry.getKey() + ":" + entry.getValue());
@@ -95,17 +98,18 @@ public class DispatcherServlet extends HttpServlet {
      */
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        //获取到请求路径   /james-springmvc/james/query
+        // 获取到请求路径   /james-springmvc/james/query
         String uri = request.getRequestURI();
-
         String context = request.getContextPath();
-        //将  "/james-springmvc/james/query"  去掉"/james-springmvc"
+        // 将"/james-springmvc/james/query"  去掉"/james-springmvc"
         String path = uri.replace(context, "");
-        //根据请求路径来获取要执行的方法
+        // 根据请求路径来获取要执行的方法
         Method method = (Method) handlerMap.get(path);
-        //拿到控制类
+        // 拿到控制类
         JamesController instance = (JamesController) beans.get("/" + path.split("/")[1]);
-        //处理器
+        /**
+         *   处理器 使用策略模式
+         */
         HandlerAdapterService ha = (HandlerAdapterService) beans.get(HANDLERADAPTER);
 
 
@@ -146,6 +150,9 @@ public class DispatcherServlet extends HttpServlet {
 
     }
 
+    /**
+     * 建立映射关系
+     */
     private void HandlerMapping() {
         if (beans.entrySet().size() <= 0) {
             System.out.println("没有类的实例化！");
@@ -154,24 +161,25 @@ public class DispatcherServlet extends HttpServlet {
 
         for (Map.Entry<String, Object> entry : beans.entrySet()) {
             Object instance = entry.getValue();
-
             Class<?> clazz = instance.getClass();
             // 拿所有Controller的类
             if (clazz.isAnnotationPresent(EnjoyController.class)) {
-                // @com.enjoy.james.annotation.EnjoyRequestMapping(value=/james)
-                EnjoyRequestMapping requestMapping = (EnjoyRequestMapping) clazz
-                        .getAnnotation(EnjoyRequestMapping.class);
-                // 获取Controller类上面的EnjoyRequestMapping注解里的请求路径
+                // 拿到类的注解对象EnjoyRequestMapping @com.enjoy.james.annotation.EnjoyRequestMapping(value=/james)
+                EnjoyRequestMapping requestMapping = clazz.getAnnotation(EnjoyRequestMapping.class);
+                // 拿到类的EnjoyRequestMapping注解值，也就是路径，获取Controller类上面的EnjoyRequestMapping注解里的请求路径
                 String classPath = requestMapping.value();
-                // 获取控制类里的所有方法
+                /**
+                 * 获取控制类里的所有方法
+                 * 1. 获取方法上的路径值
+                 */
                 Method[] methods = clazz.getMethods();
                 // 获取方法上的EnjoyRequestMapping设置的路径，与方法名建立映射关系
                 for (Method method : methods) {
                     //判断哪些方法上使用EnjoyRequestMapping路径注解
                     if (method.isAnnotationPresent(EnjoyRequestMapping.class)) {
                         //@com.enjoy.james.annotation.EnjoyRequestMapping(value=/query)
-                        EnjoyRequestMapping methodrm = (EnjoyRequestMapping) method
-                                .getAnnotation(EnjoyRequestMapping.class);
+                        EnjoyRequestMapping methodrm = method.getAnnotation(EnjoyRequestMapping.class);
+                        // 获取含有EnjoyRequestMapping注解的方法，并获取EnjoyRequestMapping的值路径
                         String methodPath = methodrm.value();
                         // 把方法上与路径建立映射关系( /james/query--->public void com.enjoy.james.controller.JamesController.query )
                         handlerMap.put(classPath + methodPath, method);
@@ -201,6 +209,9 @@ public class DispatcherServlet extends HttpServlet {
                 Field[] fields = clazz.getDeclaredFields();
                 // 判断是否声明了自动装配（依赖注入）注解，比如@Autrowired @Qualifier
                 for (Field field : fields) {
+                    /***
+                     * field: 其实就是jamesService成员变量
+                     */
                     if (field.isAnnotationPresent(EnjoyQualifier.class)) {
                         // 获取指定注解对象
                         EnjoyQualifier qualifier = field.getAnnotation(EnjoyQualifier.class);
@@ -210,6 +221,10 @@ public class DispatcherServlet extends HttpServlet {
                         field.setAccessible(true);
                         try {
                             // 从MAP容器中获取"JamesServiceImpl"对应的bean,并注入实例控制层bean,解决依赖注入
+                            /**
+                             * 设置成员变量jamesService实例对象是什么
+                             * beans.get(value): JamesServiceImpl对象
+                             */
                             field.set(instance, beans.get(value));
                         } catch (IllegalArgumentException e) {
                             // TODO Auto-generated catch block
