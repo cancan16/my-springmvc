@@ -11,13 +11,22 @@ import java.util.Map;
 
 @EnjoyService("jamesHandlerAdapter")
 public class JamesHandlerAdapter implements HandlerAdapterService {
-    // 对method方法里的参数进行处理
+
+    /**
+     * 对请求参数使用策略模式处理，并返回参数
+     *
+     * @param request
+     * @param response
+     * @param method
+     * @param beans
+     * @return
+     */
     public Object[] hand(HttpServletRequest request,// 需要传入request,拿请求的参数
                          HttpServletResponse response, Method method,// 执行的方法,可以拿到当前待执行的方法有哪些参数
                          Map<String, Object> beans) {
         // 拿到当前待执行的方法有哪些参数
         Class<?>[] paramClazzs = method.getParameterTypes();
-        // 根据参数的个数,new 一个参数的数组,将方法里的所有参数赋值到args来
+        // 根据参数的个数,new一个参数的数组,将方法里的所有参数赋值到args来
         Object[] args = new Object[paramClazzs.length];
 
         // 1、要拿到所有实现了ArgumentResolver这个接口的实现类
@@ -28,12 +37,16 @@ public class JamesHandlerAdapter implements HandlerAdapterService {
         int i = 0;
         // 对每一个参数进行循环,每个参数都有特殊处理(比如RequestParam的处理类为 RequestParamArgumentResolver )
         for (Class<?> paramClazz : paramClazzs) {
-            // 哪个参数对应了哪个参数解析类,用策略模式来找
+            /**
+             * 使用策略模式来找
+             * 哪个参数对应了哪个参数解析类
+             */
             for (Map.Entry<String, Object> entry : argumentResolvers.entrySet()) {
                 ArgumentResolver ar = (ArgumentResolver) entry.getValue();
-
+                /***判断哪个解析器支持解析*/
                 if (ar.support(paramClazz, paramIndex, method)) {
-                    args[i++] = ar.argumentResolver(request,
+                    args[i++] = ar.argumentResolver(
+                            request,
                             response,
                             paramClazz,
                             paramIndex,
@@ -42,12 +55,11 @@ public class JamesHandlerAdapter implements HandlerAdapterService {
             }
             paramIndex++;
         }
-
         return args;
     }
 
     // 获取实现了ArgumentResolver接口的所有实例(其实就是每个参数的注解实例)
-    private Map<String, Object> getBeansOfType(Map<String, Object> beans,// 所有bean
+    private Map<String, Object> getBeansOfType(Map<String, Object> beans, // 所有bean
                                                Class<?> intfType) // 类型的实例
     {
 

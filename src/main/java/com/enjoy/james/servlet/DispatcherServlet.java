@@ -108,7 +108,7 @@ public class DispatcherServlet extends HttpServlet {
         // 拿到控制类
         JamesController instance = (JamesController) beans.get("/" + path.split("/")[1]);
         /**
-         *   处理器 使用策略模式
+         * 处理器 使用策略模式
          */
         HandlerAdapterService ha = (HandlerAdapterService) beans.get(HANDLERADAPTER);
 
@@ -293,6 +293,12 @@ public class DispatcherServlet extends HttpServlet {
         }
     }
 
+    /**
+     * @Date 18:16 2020/1/6
+     * @Description 扫描初始化类的包名
+     * @Return
+     * @Param
+     */
     private void scanPackage(String basePackage) {
         //扫描编译好的类路径下所有的类
         URL url = this.getClass().getClassLoader().getResource("/" + replaceTo(basePackage));
@@ -306,7 +312,7 @@ public class DispatcherServlet extends HttpServlet {
         for (String path : filesStr) {
             File filePath = new File(fileStr + path);//扫描com.enjoy.james下的所有class类
 
-            //递归调用扫描,如果是路径,继续扫描
+            // 递归调用扫描,如果是路径,继续扫描
             if (filePath.isDirectory()) {
                 // com.enjoy.james
                 scanPackage(basePackage + "." + path);
